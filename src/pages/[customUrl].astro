@@ -38,19 +38,20 @@ const title = lines[0].replace(/<[^>]*>/g, "");
 
 <script>
   const main = document.querySelector("main") as HTMLElement;
-  if (sessionStorage.getItem("token")) {
+  const token = sessionStorage.getItem("token");
+  if (token) {
     const section = document.createElement("section");
     section.id = "token";
     const p = document.createElement("p");
     p.textContent = "Your edit token is: ";
     const code = document.createElement("code");
-    code.textContent = sessionStorage.getItem("token");
+    code.textContent = token;
     p.appendChild(code);
     code.onclick = () => {
-      navigator.clipboard.writeText(code.textContent!);
+      navigator.clipboard.writeText(token);
       code.textContent = "Copied!";
       setTimeout(() => {
-        code.textContent = sessionStorage.getItem("token");
+        code.textContent = token;
       }, 1000);
     };
     section.appendChild(p);
