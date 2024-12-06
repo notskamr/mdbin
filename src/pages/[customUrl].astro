@@ -1,5 +1,5 @@
 ---
-import { marked } from "marked";
+import { markdown } from "@astropub/md";
 import sanitizeHtml from "sanitize-html";
 import MainLayout from "../layouts/MainLayout.astro";
 import { getBin } from "../utils/db";
@@ -15,7 +15,38 @@ if (!bin) {
   return new Response(null, { status: 404 });
 }
 
-const clean = sanitizeHtml(await marked.parse(bin.content));
+const clean = sanitizeHtml(await markdown(bin.content), {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
+  allowedClasses: {
+    pre: ["astro-code", "github-dark"],
+    code: ["astro-code", "github-dark"],
+  },
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    pre: ["data-language", "style", "tabindex"],
+    code: ["data-language", "style"],
+    span: ["style"],
+    p: ["style"],
+    img: ["src", "srcset", "alt", "title", "width", "height", "loading"],
+  },
+  allowedStyles: {
+    "*": {
+      color: [
+        /^#(0x)?[0-9a-f]+$/i,
+        /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/,
+      ],
+      "background-color": [
+        /^#(0x)?[0-9a-f]+$/i,
+        /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/,
+      ],
+      "text-align": [/^left$/, /^right$/, /^center$/],
+      "font-size": [/^\d+(?:px|em|%)$/],
+      "overflow-x": [/^auto$/, /^scroll$/],
+      "overflow-y": [/^auto$/, /^scroll$/],
+      overflow: [/^auto$/, /^scroll$/],
+    },
+  },
+});
 const lines = clean.split("\n");
 const title = lines[0].replace(/<[^>]*>/g, "");
 ---
@@ -25,7 +56,6 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-6"
     set:html={clean}
   />
-
   <section id="buttons" class="flex justify-end mt-4">
     <button
       class="px-4 py-2 bg-neutral-200 dark:bg-neutral-800"
@@ -39,18 +69,23 @@ const title = lines[0].replace(/<[^>]*>/g, "");
 <script>
   const main = document.querySelector("main") as HTMLElement;
   const token = sessionStorage.getItem("token");
+  let timeout: number;
   if (token) {
     const section = document.createElement("section");
+    section.className = "bg-green-600/20 p-4 flex items-center mb-4";
     section.id = "token";
     const p = document.createElement("p");
+    p.style.margin = "0px";
     p.textContent = "Your edit token is: ";
     const code = document.createElement("code");
+    code.id = "token-code";
     code.textContent = token;
     p.appendChild(code);
     code.onclick = () => {
       navigator.clipboard.writeText(token);
       code.textContent = "Copied!";
-      setTimeout(() => {
+      clearTimeout(timeout);
+      timeout = window.setTimeout(() => {
         code.textContent = token;
       }, 1000);
     };
@@ -60,20 +95,11 @@ const title = lines[0].replace(/<[^>]*>/g, "");
   }
 </script>
 <style is:inline>
-  code {
+  #token-code {
     cursor: pointer;
     margin-left: 0.25rem;
     background: rgba(0, 0, 0, 0.3);
     padding: 0.5rem;
     border-radius: 0.5rem;
-  }
-</style>
-<style is:global>
-  #token {
-    @apply bg-green-600/20 p-4 flex items-center mb-4;
-  }
-
-  #token p {
-    @apply p-0 m-0;
   }
 </style>
