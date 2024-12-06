@@ -5,11 +5,11 @@ import { validateCustomUrl, validateToken } from "./validation";
 
 export async function newBin(content: string, customUrl?: string, token?: string) {
     // Regex to validate custom URL
-    if (customUrl && validateCustomUrl(customUrl)) {
+    if (customUrl && !validateCustomUrl(customUrl)) {
         throw new Error("Invalid custom URL - must be alphanumeric and less than 64 characters");
     }
 
-    if (token && validateToken(token)) {
+    if (token && !validateToken(token)) {
         throw new Error("Invalid token - must be between 6 and 64 characters");
     }
 
