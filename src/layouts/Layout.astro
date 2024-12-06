@@ -52,7 +52,7 @@ if (!title_ && !frontmatter?.title) {
     <slot />
     <style is:global>
       .TinyMDE {
-        @apply bg-black/5 dark:bg-white/5 text-inherit overflow-auto h-[60vh] p-2;
+        @apply bg-black/5 dark:bg-white/5 text-inherit overflow-auto h-[60vh] p-2 prose dark:prose-invert max-w-none;
       }
       .TMCommandBar {
         @apply text-inherit border-0 p-2 bg-black/10 dark:bg-white/10;
@@ -87,10 +87,12 @@ if (!title_ && !frontmatter?.title) {
       .TMIndentedCode {
         @apply bg-transparent;
       }
-
       .TMHTML,
       .TMHTMLBlock {
         @apply text-green-700 dark:text-green-500;
+      }
+      .TMLinkDestination {
+        @apply text-blue-600 dark:text-blue-400;
       }
     </style>
   </body>
