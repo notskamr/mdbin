@@ -25,3 +25,6 @@ pnpm-debug.log*
 *.db-shm
 local.db-wal
 local.db
+
+
+.vscode/

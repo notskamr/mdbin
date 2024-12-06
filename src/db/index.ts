@@ -41,9 +41,7 @@ export interface EditToken {
     createdAt: string;
 }
 
-(async () => {
-    for (const query of schemaStatements) {
-        await turso.execute(query);
-    }
-    console.log("Schema created successfully.");
-})();
+for (const query of schemaStatements) {
+    await turso.execute(query);
+}
+console.log("Schema created successfully.");
