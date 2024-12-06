@@ -1,6 +1,7 @@
 ---
 import { marked } from "marked";
-import DOMPurify from "isomorphic-dompurify";
+import { Window } from "happy-dom";
+import DOMPurify from "dompurify";
 import MainLayout from "../layouts/MainLayout.astro";
 import { getBin } from "../utils/db";
 
@@ -14,8 +15,9 @@ const bin = await getBin(customUrl);
 if (!bin) {
   return new Response(null, { status: 404 });
 }
-
-const clean = DOMPurify.sanitize(await marked.parse(bin.content));
+const window = new Window();
+const purify = DOMPurify(window);
+const clean = purify.sanitize(await marked.parse(bin.content));
 const lines = clean.split("\n");
 const title = lines[0].replace(/<[^>]*>/g, "");
 ---
