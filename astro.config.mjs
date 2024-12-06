@@ -7,5 +7,11 @@ import cloudflare from '@astrojs/cloudflare';
 export default defineConfig({
   output: 'server',
   integrations: [tailwind()],
-  adapter: cloudflare()
+  adapter: cloudflare(),
+  vite: {
+    define: {
+      "process.env.TURSO_DB_URL": JSON.stringify(process.env.TURSO_DB_URL),
+      "process.env.TURSO_AUTH_TOKEN": JSON.stringify(process.env.TURSO_AUTH_TOKEN)
+    }
+  }
 });
