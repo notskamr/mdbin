@@ -1,0 +1,82 @@
+---
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Layout from "../layouts/Layout.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  frontmatter?: any;
+  header?: boolean;
+}
+
+let { title, description, frontmatter, header = true } = Astro.props;
+description = frontmatter?.description || description;
+---
+
+<Layout title={title} description={description} frontmatter={frontmatter}>
+  <div class="mx-auto max-w-screen-md min-h-screen p-6 flex flex-col">
+    {header && <Header />}
+    <main class="mt-5 pb-5">
+      <!-- Markdown Content -->
+      <slot />
+    </main>
+  </div>
+  <Footer />
+  <script>
+    for (var links = document.links, i = 0, a; (a = links[i]); i++) {
+      console.log(a.host);
+      if (
+        a.getAttribute("href")?.endsWith("?newTab=1") ||
+        (a.host !== location.host &&
+          !["", "#"].includes(a.getAttribute("href") || ""))
+      ) {
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
+    }
+  </script>
+</Layout>
+
+<style is:global>
+  main h1 {
+    @apply text-2xl font-semibold;
+  }
+  main h2 {
+    @apply text-xl font-medium;
+  }
+  main h3 {
+    @apply text-lg font-medium;
+  }
+
+  a {
+    @apply text-blue-500 hover:underline underline-offset-2 font-medium;
+  }
+
+  a[href=""] {
+    @apply text-gray-500 cursor-not-allowed;
+  }
+
+  main p {
+    @apply mt-1 mb-5;
+  }
+  main ul {
+    @apply mt-1 mb-4;
+  }
+
+  main hr {
+    @apply mt-6 mb-5;
+  }
+
+  main table {
+    @apply w-full overflow-x-auto;
+  }
+  main th,
+  main td {
+    @apply p-2;
+  }
+
+  .md {
+    @apply prose prose-base max-w-none dark:prose-invert prose-neutral;
+  }
+</style>

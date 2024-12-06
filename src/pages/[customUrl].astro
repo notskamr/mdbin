@@ -1,0 +1,78 @@
+---
+import { marked } from "marked";
+import DOMPurify from "isomorphic-dompurify";
+import MainLayout from "../layouts/MainLayout.astro";
+import { getBin } from "../utils/db";
+
+const { customUrl } = Astro.params;
+
+if (!customUrl) {
+  return new Response(null, { status: 404 });
+}
+const bin = await getBin(customUrl);
+
+if (!bin) {
+  return new Response(null, { status: 404 });
+}
+
+const clean = DOMPurify.sanitize(await marked.parse(bin.content));
+const lines = clean.split("\n");
+const title = lines[0].replace(/<[^>]*>/g, "");
+---
+
+<MainLayout {title} header={false}>
+  <section
+    class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-4"
+    set:html={clean}
+  />
+
+  <section id="buttons" class="flex justify-end mt-4">
+    <button
+      class="px-4 py-2 bg-neutral-200 dark:bg-neutral-800"
+      onclick="alert('TODO')"
+    >
+      Edit
+    </button>
+  </section>
+</MainLayout>
+
+<script>
+  const main = document.querySelector("main") as HTMLElement;
+  if (sessionStorage.getItem("token")) {
+    const section = document.createElement("section");
+    section.id = "token";
+    const p = document.createElement("p");
+    p.textContent = "Your edit token is: ";
+    const code = document.createElement("code");
+    code.textContent = sessionStorage.getItem("token");
+    p.appendChild(code);
+    code.onclick = () => {
+      navigator.clipboard.writeText(code.textContent!);
+      code.textContent = "Copied!";
+      setTimeout(() => {
+        code.textContent = sessionStorage.getItem("token");
+      }, 1000);
+    };
+    section.appendChild(p);
+    main.prepend(section);
+    sessionStorage.removeItem("token");
+  }
+</script>
+<style is:inline>
+  code {
+    cursor: pointer;
+    margin-left: 0.25rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+  }
+</style>
+<style is:global>
+  #token {
+    @apply bg-green-600/20 p-4 flex items-center mb-4;
+  }
+
+  #token p {
+    @apply p-0 m-0;
+  }
+</style>

@@ -1,0 +1,26 @@
+---
+interface Props {
+  buttons?: boolean;
+}
+const { buttons = true } = Astro.props;
+const Nav = {
+  home: "/",
+};
+---
+
+<footer class="bottom-0 p-4 mx-auto mt-auto">
+  {
+    buttons && (
+      <div class="flex justify-center mb-1">
+        {Object.entries(Nav).map(([name, url]) => (
+          <a href={url} class="mx-2 text-blue-500 hover:underline">
+            {name}
+          </a>
+        ))}
+      </div>
+    )
+  }
+  <p class="text-center text-gray-500" class="footer-text">
+    mdbin by <a href="https://vsahni.me">varun</a>
+  </p>
+</footer>

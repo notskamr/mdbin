@@ -1,11 +1,155 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import MainLayout from "../layouts/MainLayout.astro";
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<MainLayout>
+  <div id="toolbar"></div>
+  <div class="w-full" id="editor-container"></div>
+
+  <form method="POST" novalidate>
+    <textarea id="editor" name="content" class="hidden"></textarea>
+    <ul class="errors text-red-500 list-disc pl-4"></ul>
+    <div
+      class="w-full flex flex-col md:flex-row md:justify-between mt-4 gap-y-2"
+    >
+      <!-- custom edit token and custom url fields -->
+      <div>
+        <label for="token" class="font-medium opacity-80"
+          >Custom Edit Token</label
+        >
+        <input
+          type="text"
+          id="token"
+          name="token"
+          autocomplete="off"
+          minlength="6"
+          maxlength="64"
+          class="w-full p-2"
+          placeholder="123456"
+        />
+      </div>
+      <div>
+        <label for="customUrl" class="font-medium opacity-80">Custom URL</label>
+        <input
+          type="text"
+          id="customUrl"
+          name="customUrl"
+          autocomplete="off"
+          minlength="6"
+          maxlength="64"
+          title="Only letters, numbers, underscores, and hyphens are allowed. Length between 6 and 64 characters."
+          class:list={["w-full p-2"]}
+          placeholder="my-markdown-page"
+        />
+      </div>
+    </div>
+
+    <button
+      type="submit"
+      class="w-full p-2 bg-neutral-900 text-neutral-100 dark:bg-neutral-100 dark:text-neutral-900 rounded-md mt-4 md:mt-5"
+    >
+      Save</button
+    >
+  </form>
+  <script>
+    import { actions, isInputError } from "astro:actions";
+    import { customUrlRegex, tokenRegex } from "../utils/validation";
+    import { navigate } from "astro:transitions/client";
+
+    const form = document.querySelector("form") as HTMLFormElement;
+
+    const errorMessages = {
+      content: "Content cannot be empty",
+      token: "Invalid token: must be 6-64 characters long",
+      customUrl:
+        "Invalid custom URL: must be 6-64 characters long, only alphanumeric characters, hyphens, and underscores allowed",
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const { data, error } = await actions.newBin(formData);
+      console.log(data);
+      clearErrors();
+      if (isInputError(error)) {
+        if (error.fields.content) {
+          displayError(errorMessages.content);
+        }
+        if (error.fields.token) {
+          displayError(errorMessages.token);
+        }
+        if (error.fields.customUrl) {
+          displayError(errorMessages.customUrl);
+        }
+      }
+      if (error) {
+        displayError(
+          "An error occurred. Please try again or contact the developer."
+        );
+      }
+
+      if (!error && data) {
+        sessionStorage.setItem("token", data.token);
+        navigate(`/${data.customUrl}`);
+      }
+    });
+
+    const tokenInput = document.querySelector(
+      'input[name="token"]'
+    ) as HTMLInputElement;
+    const customUrlInput = document.querySelector(
+      'input[name="customUrl"]'
+    ) as HTMLInputElement;
+
+    tokenInput.addEventListener("input", () => {
+      if (tokenInput.value === "") {
+        tokenInput.setCustomValidity("");
+        return;
+      }
+      tokenInput.setCustomValidity(
+        tokenRegex.test(tokenInput.value) ? "" : errorMessages.token
+      );
+    });
+    customUrlInput.addEventListener("input", () => {
+      if (customUrlInput.value === "") {
+        customUrlInput.setCustomValidity("");
+        return;
+      }
+      customUrlInput.setCustomValidity(
+        customUrlRegex.test(customUrlInput.value) ? "" : errorMessages.customUrl
+      );
+    });
+
+    const errors = document.querySelector(".errors") as HTMLUListElement;
+
+    function clearErrors() {
+      errors.innerHTML = "";
+    }
+
+    function displayError(message: string) {
+      const error = document.createElement("li");
+      error.textContent = message;
+      errors.appendChild(error);
+    }
+  </script>
+  <script is:inline>
+    document.addEventListener("DOMContentLoaded", () => {
+      const editor = new TinyMDE.Editor({ textarea: "editor" });
+      const toolbar = new TinyMDE.CommandBar({ element: "toolbar", editor });
+    });
+  </script>
+</MainLayout>
+
+<style>
+  input {
+    @apply bg-black/5 dark:bg-white/5 text-black dark:text-white border-0 p-2;
+  }
+
+  input:invalid {
+    @apply border-red-500 border-2;
+  }
+
+  input:valid {
+    @apply border-green-500 dark:border-green-700 border-2;
+  }
+</style>
