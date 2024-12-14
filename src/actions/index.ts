@@ -49,9 +49,7 @@ export const server = {
         }),
         handler: async ({ binId, content, token }, ctx) => {
             try {
-                await editBin(binId, content, token);
-                const bin = await getBinById(binId) as Bin;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                const bin = await editBin(binId, content, token);
                 return {
                     bin,
                     success: true,

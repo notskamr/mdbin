@@ -69,6 +69,7 @@ export async function getBinById(binId: number) {
     if (res.rows.length === 0) {
         return null;
     }
+
     return parseBinRes(res.rows[0] as unknown as BinRes);
 }
 
@@ -78,10 +79,16 @@ export async function editBin(binId: number, content: string, token: string) {
         throw new Error("Invalid token");
     }
 
-    await turso.execute({
-        sql: `UPDATE markdown_bins SET content = ? WHERE id = ?`,
+    const res = await turso.execute({
+        sql: `UPDATE markdown_bins SET content = ? WHERE id = ? RETURNING *`,
         args: [content, binId],
     });
+
+    if (res.rows.length === 0) {
+        throw new Error("Bin not found. Something went wrong!");
+    }
+
+    return parseBinRes(res.rows[0] as unknown as BinRes);
 }
 
 export async function deleteBin(binId: number, token: string) {
