@@ -1,8 +1,9 @@
 ---
-import { markdown } from "@astropub/md";
+// import { markdown } from "@astropub/md";
 import sanitizeHtml from "sanitize-html";
 import MainLayout from "../layouts/MainLayout.astro";
 import { getBin } from "../utils/db";
+import { marked } from "marked";
 
 const { customUrl } = Astro.params;
 
@@ -15,7 +16,7 @@ if (!bin) {
   return new Response(null, { status: 404 });
 }
 
-const clean = sanitizeHtml(await markdown(bin.content), {
+const clean = sanitizeHtml(await marked.parse(bin.content), {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
   allowedClasses: {
     pre: ["astro-code", "github-dark"],
