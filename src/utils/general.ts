@@ -20,3 +20,9 @@ export function generateCustomUrl() {
 export function generateToken() {
     return Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 8);
 }
+
+export function getTitle(content: string) {
+    const lines = content.split("\n");
+    const title = lines[0].replace(/<[^>]*>/g, "");
+    return title;
+}

@@ -2,7 +2,8 @@ import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'astro:schema';
 import { customUrlRegex, tokenRegex } from '../utils/validation';
 
-import { newBin } from '../utils/db';
+import { editBin, getBin, getBinById, newBin } from '../utils/db';
+import type { Bin } from '../db';
 
 export const server = {
     newBin: defineAction({
@@ -30,10 +31,38 @@ export const server = {
                     });
                 }
                 else {
-                    console.error(e);
+                    throw new ActionError({
+                        code: "BAD_REQUEST",
+                        message: e.message || "An error occurred"
+                    });
                 }
             }
 
         }
-    })
+    }),
+    editBin: defineAction({
+        accept: "form",
+        input: z.object({
+            binId: z.number(),
+            content: z.string(),
+            token: z.string(),
+        }),
+        handler: async ({ binId, content, token }, ctx) => {
+            try {
+                await editBin(binId, content, token);
+                const bin = await getBinById(binId) as Bin;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+                return {
+                    bin,
+                    success: true,
+                };
+            }
+            catch (e: any) {
+                throw new ActionError({
+                    code: "BAD_REQUEST",
+                    message: e.message
+                });
+            }
+        }
+    }),
 };

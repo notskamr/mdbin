@@ -1,19 +1,36 @@
 ---
 import MainLayout from "../layouts/MainLayout.astro";
+import { getBin } from "../utils/db";
+
+// get the custom URL from the request headers
+
+const customUrl = Astro.request.headers.get("x-custom-url");
+
+const bin = customUrl ? await getBin(customUrl) : null;
+const isEdit = !!bin;
 ---
 
-<MainLayout>
+<MainLayout title={isEdit ? "Editing Bin" : undefined}>
   <div id="toolbar"></div>
   <div class="w-full" id="editor-container"></div>
 
-  <form method="POST" novalidate>
-    <textarea id="editor" name="content" class="hidden"></textarea>
+  <form data-edit={isEdit} method="POST" novalidate>
+    {
+      isEdit && (
+        <input type="hidden" type="number" name="binId" value={bin?.id} />
+      )
+    }
+    <textarea
+      id="editor"
+      name="content"
+      class="hidden"
+      set:html={bin?.content}
+    />
     <ul class="errors text-red-500 list-disc pl-4"></ul>
     <div
       class="w-full flex flex-col md:flex-row md:justify-between mt-4 gap-y-2"
     >
-      <!-- custom edit token and custom url fields -->
-      <div>
+      <div class={isEdit ? "w-full" : undefined}>
         <label for="token" class="font-medium opacity-80"
           >Custom Edit Token</label
         >
@@ -28,20 +45,26 @@ import MainLayout from "../layouts/MainLayout.astro";
           placeholder="123456"
         />
       </div>
-      <div>
-        <label for="customUrl" class="font-medium opacity-80">Custom URL</label>
-        <input
-          type="text"
-          id="customUrl"
-          name="customUrl"
-          autocomplete="off"
-          minlength="6"
-          maxlength="64"
-          title="Only letters, numbers, underscores, and hyphens are allowed. Length between 6 and 64 characters."
-          class:list={["w-full p-2"]}
-          placeholder="my-markdown-page"
-        />
-      </div>
+      {
+        !isEdit && (
+          <div>
+            <label for="customUrl" class="font-medium opacity-80">
+              Custom URL
+            </label>
+            <input
+              type="text"
+              id="customUrl"
+              name="customUrl"
+              autocomplete="off"
+              minlength="6"
+              maxlength="64"
+              title="Only letters, numbers, underscores, and hyphens are allowed. Length between 6 and 64 characters."
+              class:list={["w-full p-2"]}
+              placeholder="my-markdown-page"
+            />
+          </div>
+        )
+      }
     </div>
 
     <button
@@ -57,7 +80,9 @@ import MainLayout from "../layouts/MainLayout.astro";
     import { navigate } from "astro:transitions/client";
 
     const form = document.querySelector("form") as HTMLFormElement;
+    const isEdit = form.dataset.edit === "true";
 
+    const errors = document.querySelector(".errors") as HTMLUListElement;
     const errorMessages = {
       content: "Content cannot be empty",
       token: "Invalid token: must be 6-64 characters long",
@@ -68,29 +93,11 @@ import MainLayout from "../layouts/MainLayout.astro";
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
-      const { data, error } = await actions.newBin(formData);
-      console.log(data);
-      clearErrors();
-      if (isInputError(error)) {
-        if (error.fields.content) {
-          displayError(errorMessages.content);
-        }
-        if (error.fields.token) {
-          displayError(errorMessages.token);
-        }
-        if (error.fields.customUrl) {
-          displayError(errorMessages.customUrl);
-        }
-      }
-      if (error) {
-        displayError(
-          "An error occurred. Please try again or contact the developer."
-        );
-      }
 
-      if (!error && data) {
-        sessionStorage.setItem("token", data.token);
-        navigate(`/${data.customUrl}`);
+      if (isEdit) {
+        await editBin(formData);
+      } else {
+        await newBin(formData);
       }
     });
 
@@ -110,7 +117,8 @@ import MainLayout from "../layouts/MainLayout.astro";
         tokenRegex.test(tokenInput.value) ? "" : errorMessages.token
       );
     });
-    customUrlInput.addEventListener("input", () => {
+
+    customUrlInput?.addEventListener("input", () => {
       if (customUrlInput.value === "") {
         customUrlInput.setCustomValidity("");
         return;
@@ -120,8 +128,6 @@ import MainLayout from "../layouts/MainLayout.astro";
       );
     });
 
-    const errors = document.querySelector(".errors") as HTMLUListElement;
-
     function clearErrors() {
       errors.innerHTML = "";
     }
@@ -130,6 +136,57 @@ import MainLayout from "../layouts/MainLayout.astro";
       const error = document.createElement("li");
       error.textContent = message;
       errors.appendChild(error);
+    }
+
+    async function newBin(formData: FormData) {
+      const { data, error } = await actions.newBin(formData);
+      console.log(data);
+      clearErrors();
+      if (isInputError(error)) {
+        if (error.fields.content) {
+          displayError(errorMessages.content);
+        }
+        if (error.fields.token) {
+          displayError(errorMessages.token);
+        }
+        if (error.fields.customUrl) {
+          displayError(errorMessages.customUrl);
+        }
+      }
+      if (error) {
+        displayError(
+          error.message ||
+            "An error occurred. Please try again later or contact the developer."
+        );
+      }
+
+      if (!error && data) {
+        sessionStorage.setItem("token", data.token);
+        navigate(`/${data.customUrl}`);
+      }
+    }
+
+    async function editBin(formData: FormData) {
+      const { data, error } = await actions.editBin(formData);
+      console.log(data);
+      clearErrors();
+      if (isInputError(error)) {
+        if (error.fields.content) {
+          displayError(errorMessages.content);
+        }
+        if (error.fields.token) {
+          displayError(errorMessages.token);
+        }
+      } else if (error) {
+        displayError(
+          error.message ||
+            "An error occurred. Please try again later or contact the developer."
+        );
+      }
+
+      if (!error && data) {
+        navigate(`/${data.bin.customUrl}`);
+      }
     }
   </script>
   <script is:inline>

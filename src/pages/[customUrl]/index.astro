@@ -1,8 +1,8 @@
 ---
 // import { markdown } from "@astropub/md";
 import sanitizeHtml from "sanitize-html";
-import MainLayout from "../layouts/MainLayout.astro";
-import { getBin } from "../utils/db";
+import MainLayout from "../../layouts/MainLayout.astro";
+import { getBin } from "../../utils/db";
 import { marked } from "marked";
 
 const { customUrl } = Astro.params;
@@ -58,12 +58,12 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     set:html={clean}
   />
   <section id="buttons" class="flex justify-end mt-4">
-    <button
+    <a
       class="px-4 py-2 bg-neutral-200 dark:bg-neutral-800"
-      onclick="alert('TODO')"
+      href={`/${customUrl}/edit`}
     >
       Edit
-    </button>
+    </a>
   </section>
 </MainLayout>
 

@@ -1,4 +1,4 @@
-import { turso, type Bin } from "../db";
+import { turso, type Bin, type BinRes } from "../db";
 import { hashString, verifyString } from "./hashing";
 import { formatToken, generateCustomUrl, generateToken, parseToken } from "./general";
 import { validateCustomUrl, validateToken } from "./validation";
@@ -40,6 +40,10 @@ export async function newBin(content: string, customUrl?: string, token?: string
         binId,
         customUrl,
         token,
+    } as {
+        binId: Bin["id"];
+        customUrl: Bin["customUrl"];
+        token: string;
     };
 }
 
@@ -49,7 +53,23 @@ export async function getBin(customUrl: string) {
         args: [customUrl],
     });
 
-    return res.rows[0] as unknown as Bin;
+    // If the bin doesn't exist, return null
+    if (res.rows.length === 0) {
+        return null;
+    }
+
+    return parseBinRes(res.rows[0] as unknown as BinRes);
+}
+
+export async function getBinById(binId: number) {
+    const res = await turso.execute({
+        sql: `SELECT * FROM markdown_bins WHERE id = ?`,
+        args: [binId],
+    });
+    if (res.rows.length === 0) {
+        return null;
+    }
+    return parseBinRes(res.rows[0] as unknown as BinRes);
 }
 
 export async function editBin(binId: number, content: string, token: string) {
@@ -104,4 +124,14 @@ export async function checkCustomUrlAvailable(customUrl: string) {
     });
 
     return rows.length === 0;
+}
+
+export function parseBinRes(res: BinRes) {
+    return {
+        id: res.id,
+        customUrl: res.custom_url,
+        content: res.content,
+        createdAt: res.created_at,
+        updatedAt: res.updated_at,
+    } as Bin;
 }

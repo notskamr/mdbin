@@ -26,6 +26,13 @@ const schemaStatements = [
     `
 ];
 
+export interface BinRes {
+    id: number;
+    custom_url: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+}
 export interface Bin {
     id: number;
     customUrl: string;
