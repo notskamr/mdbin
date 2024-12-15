@@ -105,8 +105,14 @@ const title = lines[0].replace(/<[^>]*>/g, "");
   #token-code {
     cursor: pointer;
     margin-left: 0.25rem;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.1);
     padding: 0.5rem;
     border-radius: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    #token-code {
+      background: rgba(0, 0, 0, 0.3);
+    }
   }
 </style>
