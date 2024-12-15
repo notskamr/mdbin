@@ -57,7 +57,13 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-6"
     set:html={clean}
   />
-  <section id="buttons" class="flex justify-end mt-4">
+  <section id="buttons" class="flex justify-start mt-4 gap-2">
+    <a
+      class="px-4 py-2 bg-neutral-200 dark:bg-neutral-800"
+      href={`/${customUrl}/raw`}
+    >
+      Raw
+    </a>
     <a
       class="px-4 py-2 bg-neutral-200 dark:bg-neutral-800"
       href={`/${customUrl}/edit`}
