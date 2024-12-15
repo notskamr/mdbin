@@ -40,13 +40,7 @@ if (!title_ && !frontmatter?.title) {
       href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
       rel="stylesheet"
     />
-    <script src="https://unpkg.com/tiny-markdown-editor/dist/tiny-mde.min.js"
-    ></script>
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="https://unpkg.com/tiny-markdown-editor/dist/tiny-mde.min.css"
-    />
+    <slot name="head-scripts" />
   </head>
   <body class="dark:bg-neutral-900 bg-slate-50 dark:text-white">
     <slot />
@@ -93,6 +87,10 @@ if (!title_ && !frontmatter?.title) {
       }
       .TMLinkDestination {
         @apply text-blue-600 dark:text-blue-400;
+      }
+
+      .TMCommandDivider {
+        @apply border-l-neutral-500 border-r-neutral-500 dark:border-l-neutral-300 dark:border-r-neutral-300;
       }
     </style>
   </body>

@@ -36,6 +36,8 @@ description = frontmatter?.description || description;
       }
     }
   </script>
+  <slot name="head-scripts" slot="head-scripts" />
+  <slot name="scripts" />
 </Layout>
 
 <style is:global>

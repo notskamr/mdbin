@@ -11,6 +11,18 @@ const isEdit = !!bin;
 ---
 
 <MainLayout title={isEdit ? "Editing Bin" : undefined}>
+  <Fragment slot="head-scripts">
+    <script
+      is:inline
+      src="https://unpkg.com/tiny-markdown-editor/dist/tiny-mde.min.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://unpkg.com/tiny-markdown-editor/dist/tiny-mde.min.css"
+    />
+  </Fragment>
+
   <div id="toolbar"></div>
   <div class="w-full" id="editor-container"></div>
 
@@ -193,11 +205,10 @@ const isEdit = !!bin;
       }
     }
   </script>
-  <script is:inline>
-    document.addEventListener("DOMContentLoaded", () => {
-      const editor = new TinyMDE.Editor({ textarea: "editor" });
-      const toolbar = new TinyMDE.CommandBar({ element: "toolbar", editor });
-    });
+
+  <script is:inline slot="scripts">
+    const editor = new TinyMDE.Editor({ textarea: "editor" });
+    const toolbar = new TinyMDE.CommandBar({ element: "toolbar", editor });
   </script>
 </MainLayout>
 
