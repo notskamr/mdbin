@@ -1,4 +1,4 @@
 export const NAV = {
     home: "/",
-    about: "/about-mdbin",
+    about: "/about",
 };
