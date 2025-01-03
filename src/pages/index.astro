@@ -12,15 +12,8 @@ const isEdit = !!bin;
 
 <MainLayout title={isEdit ? "Editing Bin" : undefined}>
   <Fragment slot="head-scripts">
-    <script
-      is:inline
-      src="https://unpkg.com/tiny-markdown-editor/dist/tiny-mde.min.js"
-    ></script>
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="https://unpkg.com/tiny-markdown-editor/dist/tiny-mde.min.css"
-    />
+    <script is:inline src="/tiny-mde/tiny-mde.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/tiny-mde/tiny-mde.min.css" />
   </Fragment>
 
   <div id="toolbar"></div>
