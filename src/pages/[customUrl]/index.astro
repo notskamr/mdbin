@@ -1,9 +1,10 @@
 ---
-// import { markdown } from "@astropub/md";
 import sanitizeHtml from "sanitize-html";
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getBin } from "../../utils/db";
-import { marked } from "marked";
+import { Marked } from "marked";
+import { markedHighlight } from "marked-highlight";
+import hljs from "highlight.js";
 
 const { customUrl } = Astro.params;
 
@@ -16,11 +17,24 @@ if (!bin) {
   return new Response(null, { status: 404 });
 }
 
-const clean = sanitizeHtml(await marked.parse(bin.content), {
+const marked = new Marked(
+  markedHighlight({
+    emptyLangClass: "hljs",
+    langPrefix: "hljs language-",
+    highlight(code, lang, info) {
+      const language = hljs.getLanguage(lang) ? lang : "plaintext";
+      return hljs.highlight(code, { language }).value;
+    },
+  })
+);
+
+const parsed = await marked.parse(bin.content);
+
+const clean = sanitizeHtml(parsed, {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
   allowedClasses: {
-    pre: ["astro-code", "github-dark"],
-    code: ["astro-code", "github-dark"],
+    pre: ["astro-code", "github-dark", "github-light", "hljs"],
+    code: ["astro-code", "github-dark", "github-light", "hljs"],
   },
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
@@ -53,9 +67,23 @@ const title = lines[0].replace(/<[^>]*>/g, "");
 ---
 
 <MainLayout {title} header={false}>
+  <Fragment slot="head-scripts">
+    <link
+      id="hljs-theme-light"
+      rel="stylesheet"
+      href="/resources/highlight-js/github.min.css"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      id="hljs-theme-dark"
+      rel="stylesheet"
+      href="/resources/highlight-js/github-dark.min.css"
+      media="(prefers-color-scheme: dark)"
+    />
+  </Fragment>
   <section
     class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-6"
-    set:html={clean}
+    set:html={parsed}
   />
   <section id="buttons" class="flex justify-start mt-4 gap-2">
     <a
@@ -74,6 +102,21 @@ const title = lines[0].replace(/<[^>]*>/g, "");
 </MainLayout>
 
 <script>
+  const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function handleThemeChange(e: MediaQueryListEvent | MediaQueryList) {
+    const isDarkMode = e.matches;
+    document.querySelectorAll("pre code").forEach((block) => {
+      block.classList.toggle("github-dark", isDarkMode);
+      block.classList.toggle("github-light", !isDarkMode);
+    });
+  }
+
+  handleThemeChange(darkModeMediaQuery);
+
+  darkModeMediaQuery.addEventListener("change", handleThemeChange);
+
+  // token
   const main = document.querySelector("main") as HTMLElement;
   const token = sessionStorage.getItem("token");
   let timeout: number;
@@ -113,6 +156,30 @@ const title = lines[0].replace(/<[^>]*>/g, "");
   @media (prefers-color-scheme: dark) {
     #token-code {
       background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* Base code block styling */
+  pre {
+    border-radius: 6px;
+    margin: 1em 0;
+  }
+
+  pre code.hljs {
+    padding: 1em;
+    border-radius: 4px;
+  }
+
+  /* Ensure proper contrast in light/dark modes */
+  @media (prefers-color-scheme: light) {
+    .md pre {
+      background-color: #f6f8fa;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .md pre {
+      background-color: #0d1117;
     }
   }
 </style>

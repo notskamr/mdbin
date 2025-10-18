@@ -15,7 +15,9 @@
     "@tailwindcss/typography": "^0.5.15",
     "@types/sanitize-html": "^2.13.0",
     "astro": "^5.0.3",
+    "highlight.js": "^11.11.1",
     "marked": "^15.0.3",
+    "marked-highlight": "^2.2.2",
     "sanitize-html": "^2.13.1",
     "tailwindcss": "^3.4.16",
     "tiny-markdown-editor": "^0.1.29"
