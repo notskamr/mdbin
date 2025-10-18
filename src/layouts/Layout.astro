@@ -5,11 +5,7 @@ interface Props {
   frontmatter?: any;
 }
 
-const {
-  title: title_,
-  description = "An aggregator site for IB Resources!",
-  frontmatter,
-} = Astro.props;
+const { title: title_, frontmatter } = Astro.props;
 
 let defaultTitle = "mdbin";
 let title;

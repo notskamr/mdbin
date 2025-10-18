@@ -1,0 +1,49 @@
+---
+export interface PageSEO {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: string;
+  noIndex?: boolean;
+}
+
+interface Props extends PageSEO {}
+
+const {
+  title,
+  description = "Pastebin but markdown.",
+  image = "/favicon.svg",
+  type = "website",
+  noIndex = false,
+} = Astro.props as Props;
+
+const siteName = "mdbin";
+const pageTitle = title ? `${title} - ${siteName}` : siteName;
+
+let canonical = "";
+try {
+  if (Astro.request && Astro.request.url) {
+    canonical = new URL(Astro.request.url).toString();
+  }
+} catch (e) {
+  // just dont do anything
+}
+---
+
+<!-- normal -->{
+  noIndex ? <meta name="robots" content="noindex,nofollow" /> : null
+}
+<meta name="description" content={description} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={type} />
+{canonical ? <link rel="canonical" href={canonical} /> : null}
+<meta property="og:url" content={canonical} />
+{image ? <meta property="og:image" content={image} /> : null}
+
+<!-- twitter (or x???)  -->
+<meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={description} />
+{image ? <meta name="twitter:image" content={image} /> : null}

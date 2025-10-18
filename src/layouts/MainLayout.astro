@@ -2,19 +2,25 @@
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import Layout from "../layouts/Layout.astro";
+import SEO, { type PageSEO } from "../components/SEO.astro";
 
 interface Props {
   title?: string;
   description?: string;
   frontmatter?: any;
   header?: boolean;
+  seo?: PageSEO;
 }
 
 let { title, description, frontmatter, header = true } = Astro.props;
+
+let seo = Astro.props.seo || { title, description, image: frontmatter?.image };
+
 description = frontmatter?.description || description;
 ---
 
 <Layout title={title} description={description} frontmatter={frontmatter}>
+  <SEO {...seo} />
   <div class="mx-auto max-w-screen-lg min-h-screen p-6 flex flex-col">
     {header && <Header />}
     <main class="mt-5 pb-5">
