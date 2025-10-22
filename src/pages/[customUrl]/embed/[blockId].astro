@@ -1,0 +1,329 @@
+---
+import { getBin } from "../../../utils/db";
+import { parseMarkdown, extractCodeBlock } from "../../../utils/markdown";
+
+const { customUrl, blockId } = Astro.params;
+
+if (!customUrl || !blockId) {
+  return new Response(null, { status: 404 });
+}
+
+const bin = await getBin(customUrl);
+
+if (!bin) {
+  return new Response(null, { status: 404 });
+}
+
+const parsed = await parseMarkdown(bin.content);
+
+// get code block index
+const blockIndex = parseInt(blockId.replace("code-block-", ""));
+const result = extractCodeBlock(parsed, blockIndex);
+
+if (!result) {
+  return new Response(null, { status: 404 });
+}
+
+const { html: codeContent, language } = result;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Embed - {language}</title>
+    <link
+      rel="stylesheet"
+      href="/resources/highlight-js/github.min.css"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      rel="stylesheet"
+      href="/resources/highlight-js/github-dark.min.css"
+      media="(prefers-color-scheme: dark)"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .embed-header {
+        padding: 10px 14px;
+        border-bottom: 1px solid;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
+
+      .embed-header .language {
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 11px;
+        opacity: 0.7;
+        font-weight: 600;
+      }
+
+      .embed-header .actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .code-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        background: transparent;
+      }
+
+      .code-btn svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .code-container {
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+      }
+
+      .code-container::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      .code-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .code-container::-webkit-scrollbar-thumb {
+        border-radius: 5px;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px;
+        height: 100%;
+        overflow: visible;
+        border-radius: 0;
+        font-size: 12px;
+        line-height: 1.5;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+
+      pre code.hljs {
+        display: block;
+        padding: 0;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+      }
+
+      @media (prefers-color-scheme: light) {
+        body {
+          background-color: #ffffff;
+          color: #24292f;
+        }
+
+        .embed-header {
+          background-color: #f6f8fa;
+          border-color: #d0d7de;
+          color: #24292f;
+        }
+
+        .code-btn {
+          color: #57606a;
+        }
+
+        .code-btn:hover {
+          background-color: rgba(175, 184, 193, 0.2);
+        }
+
+        .code-container::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.2);
+        }
+
+        .code-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 0, 0, 0.3);
+        }
+
+        pre {
+          background-color: #ffffff;
+        }
+
+        pre code.hljs {
+          color: #24292f;
+          background-color: transparent;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #0d1117;
+          color: #e6edf3;
+        }
+
+        .embed-header {
+          background-color: #161b22;
+          border-color: #30363d;
+          color: #e6edf3;
+        }
+
+        .code-btn {
+          color: #8b949e;
+        }
+
+        .code-btn:hover {
+          background-color: rgba(110, 118, 129, 0.2);
+        }
+
+        .code-container::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        .code-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        pre {
+          background-color: #0d1117;
+        }
+
+        pre code.hljs {
+          color: #e6edf3;
+          background-color: transparent;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="embed-header">
+      <span class="language">{language}</span>
+      <div class="actions">
+        <button
+          class="code-btn"
+          id="copy-btn"
+          title="Copy code"
+          aria-label="Copy code"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path
+              d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+            ></path><path d="M16 4h2a2 2 0 0 1 2 2v4"></path><path d="M21 14H11"
+            ></path><path d="m15 10-4 4 4 4"></path></svg
+          >
+        </button>
+        <button
+          class="code-btn"
+          id="embed-btn"
+          title="Copy embed link"
+          aria-label="Copy embed link"
+          data-embed-url={`/${customUrl}/embed/${blockId}`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path d="M9 17H7A5 5 0 0 1 7 7h2"></path><path
+              d="M15 7h2a5 5 0 1 1 0 10h-2"></path><line
+              x1="8"
+              x2="16"
+              y1="12"
+              y2="12"></line></svg
+          >
+        </button>
+      </div>
+    </div>
+    <div class="code-container">
+      <div set:html={codeContent} />
+    </div>
+    <script>
+      import {
+        LUCIDE_ICONS,
+        calculateIframeHeight,
+        generateIframeCode,
+        copyToClipboard,
+      } from "../../../utils/codeblocks";
+
+      // dom check
+      document.addEventListener("DOMContentLoaded", () => {
+        const copyBtn = document.getElementById("copy-btn");
+        const embedBtn = document.getElementById("embed-btn");
+        const codeElement = document.querySelector(".code-container pre code");
+
+        const embedUrl = embedBtn?.getAttribute("data-embed-url") || "";
+
+        if (!codeElement) {
+          console.error("Code element not found");
+          return;
+        }
+
+        copyBtn?.addEventListener("click", async () => {
+          const code = codeElement.textContent || "";
+          const success = await copyToClipboard(code);
+
+          if (success) {
+            copyBtn.innerHTML = LUCIDE_ICONS.check;
+            setTimeout(() => {
+              copyBtn.innerHTML = LUCIDE_ICONS.copy;
+            }, 1500);
+          }
+        });
+
+        embedBtn?.addEventListener("click", async () => {
+          const codeLines = (codeElement.textContent || "").split("\n").length;
+          const calculatedHeight = calculateIframeHeight(codeLines);
+          const fullUrl = `${window.location.origin}${embedUrl}`;
+          const iframeCode = generateIframeCode(fullUrl, calculatedHeight);
+
+          const success = await copyToClipboard(iframeCode);
+
+          if (success) {
+            embedBtn.innerHTML = LUCIDE_ICONS.check;
+            setTimeout(() => {
+              embedBtn.innerHTML = LUCIDE_ICONS.link;
+            }, 1500);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

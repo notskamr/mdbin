@@ -1,10 +1,7 @@
 ---
-import sanitizeHtml from "sanitize-html";
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getBin } from "../../utils/db";
-import { Marked } from "marked";
-import { markedHighlight } from "marked-highlight";
-import hljs from "highlight.js";
+import { parseMarkdown } from "../../utils/markdown";
 
 const { customUrl } = Astro.params;
 
@@ -17,51 +14,7 @@ if (!bin) {
   return new Response(null, { status: 404 });
 }
 
-const marked = new Marked(
-  markedHighlight({
-    emptyLangClass: "hljs",
-    langPrefix: "hljs language-",
-    highlight(code, lang, info) {
-      const language = hljs.getLanguage(lang) ? lang : "plaintext";
-      return hljs.highlight(code, { language }).value;
-    },
-  })
-);
-
-const parsed = await marked.parse(bin.content);
-
-const clean = sanitizeHtml(parsed, {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
-  allowedClasses: {
-    pre: ["astro-code", "github-dark", "github-light", "hljs"],
-    code: ["astro-code", "github-dark", "github-light", "hljs"],
-  },
-  allowedAttributes: {
-    ...sanitizeHtml.defaults.allowedAttributes,
-    pre: ["data-language", "style", "tabindex"],
-    code: ["data-language", "style"],
-    span: ["style"],
-    p: ["style"],
-    img: ["src", "srcset", "alt", "title", "width", "height", "loading"],
-  },
-  allowedStyles: {
-    "*": {
-      color: [
-        /^#(0x)?[0-9a-f]+$/i,
-        /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/,
-      ],
-      "background-color": [
-        /^#(0x)?[0-9a-f]+$/i,
-        /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/,
-      ],
-      "text-align": [/^left$/, /^right$/, /^center$/],
-      "font-size": [/^\d+(?:px|em|%)$/],
-      "overflow-x": [/^auto$/, /^scroll$/],
-      "overflow-y": [/^auto$/, /^scroll$/],
-      overflow: [/^auto$/, /^scroll$/],
-    },
-  },
-});
+const clean = await parseMarkdown(bin.content);
 const lines = clean.split("\n");
 const title = lines[0].replace(/<[^>]*>/g, "");
 ---
@@ -81,6 +34,7 @@ const title = lines[0].replace(/<[^>]*>/g, "");
       media="(prefers-color-scheme: dark)"
     />
   </Fragment>
+
   <section
     class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-6"
     set:html={clean}
@@ -102,6 +56,13 @@ const title = lines[0].replace(/<[^>]*>/g, "");
 </MainLayout>
 
 <script>
+  import {
+    LUCIDE_ICONS,
+    calculateIframeHeight,
+    generateIframeCode,
+    copyToClipboard,
+  } from "../../utils/codeblocks";
+
   const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
   function handleThemeChange(e: MediaQueryListEvent | MediaQueryList) {
@@ -143,6 +104,66 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     main.prepend(section);
     sessionStorage.removeItem("token");
   }
+
+  // code blocks
+  document.querySelectorAll(".md pre").forEach((pre, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "code-block-wrapper";
+    pre.parentNode?.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "code-toolbar";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "code-btn";
+    copyBtn.innerHTML = LUCIDE_ICONS.copy;
+    copyBtn.title = "Copy code";
+    copyBtn.ariaLabel = "Copy code";
+
+    const embedBtn = document.createElement("button");
+    embedBtn.className = "code-btn";
+    embedBtn.innerHTML = LUCIDE_ICONS.link;
+    embedBtn.title = "Copy embed link";
+    embedBtn.ariaLabel = "Copy embed link";
+
+    const codeElement = pre.querySelector("code");
+
+    copyBtn.addEventListener("click", async () => {
+      const code = codeElement?.textContent || "";
+      const success = await copyToClipboard(code);
+
+      if (success) {
+        copyBtn.innerHTML = LUCIDE_ICONS.check;
+        setTimeout(() => {
+          copyBtn.innerHTML = LUCIDE_ICONS.copy;
+        }, 1500);
+      }
+    });
+
+    embedBtn.addEventListener("click", async () => {
+      const blockId = `code-block-${index}`;
+      pre.id = blockId;
+
+      const codeLines = (codeElement?.textContent || "").split("\n").length;
+      const calculatedHeight = calculateIframeHeight(codeLines);
+      const embedUrl = `${window.location.origin}${window.location.pathname}/embed/${blockId}`;
+      const iframeCode = generateIframeCode(embedUrl, calculatedHeight);
+
+      const success = await copyToClipboard(iframeCode);
+
+      if (success) {
+        embedBtn.innerHTML = LUCIDE_ICONS.check;
+        setTimeout(() => {
+          embedBtn.innerHTML = LUCIDE_ICONS.link;
+        }, 1500);
+      }
+    });
+
+    toolbar.appendChild(copyBtn);
+    toolbar.appendChild(embedBtn);
+    wrapper.appendChild(toolbar);
+  });
 </script>
 <style is:inline>
   #token-code {
@@ -159,27 +180,110 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     }
   }
 
-  /* Base code block styling */
-  pre {
-    border-radius: 6px;
+  .code-block-wrapper {
+    position: relative;
     margin: 1em 0;
   }
 
-  pre code.hljs {
-    padding: 1em;
-    border-radius: 4px;
+  .code-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
   }
 
-  /* Ensure proper contrast in light/dark modes */
+  .code-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  @media (prefers-color-scheme: light) {
+    .code-btn {
+      background-color: #ffffff;
+      border-color: #d0d7de;
+      color: #24292f;
+    }
+
+    .code-btn:hover {
+      background-color: #f6f8fa;
+      border-color: #afb8c1;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .code-btn {
+      background-color: #0d1117;
+      border-color: #30363d;
+      color: #e6edf3;
+    }
+
+    .code-btn:hover {
+      background-color: #161b22;
+      border-color: #484f58;
+    }
+  }
+
+  .md pre {
+    border-radius: 6px;
+    margin: 0;
+    padding: 1em;
+    overflow-x: auto;
+  }
+
+  .md pre code.hljs {
+    display: block;
+    padding: 0;
+  }
+
   @media (prefers-color-scheme: light) {
     .md pre {
-      background-color: #f6f8fa;
+      background-color: #ffffff;
+      border: 1px solid #d0d7de;
+    }
+
+    .md pre code.hljs {
+      color: #24292f;
     }
   }
 
   @media (prefers-color-scheme: dark) {
     .md pre {
       background-color: #0d1117;
+      border: 1px solid #30363d;
+    }
+
+    .md pre code.hljs {
+      color: #e6edf3;
+    }
+  }
+
+  .md code:not(pre code) {
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 85%;
+  }
+
+  @media (prefers-color-scheme: light) {
+    .md code:not(pre code) {
+      background-color: rgba(175, 184, 193, 0.2);
+      color: #24292f;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .md code:not(pre code) {
+      background-color: rgba(110, 118, 129, 0.4);
+      color: #e6edf3;
     }
   }
 </style>
