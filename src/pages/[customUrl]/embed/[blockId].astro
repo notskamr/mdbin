@@ -1,8 +1,6 @@
 ---
 import { getBin } from "../../../utils/db";
-import { Marked } from "marked";
-import { markedHighlight } from "marked-highlight";
-import hljs from "highlight.js";
+import { parseMarkdown, extractCodeBlock } from "../../../utils/markdown";
 
 const { customUrl, blockId } = Astro.params;
 
@@ -16,34 +14,17 @@ if (!bin) {
   return new Response(null, { status: 404 });
 }
 
-const marked = new Marked(
-  markedHighlight({
-    emptyLangClass: "hljs",
-    langPrefix: "hljs language-",
-    highlight(code, lang, info) {
-      const language = hljs.getLanguage(lang) ? lang : "plaintext";
-      return hljs.highlight(code, { language }).value;
-    },
-  })
-);
+const parsed = await parseMarkdown(bin.content);
 
-const parsed = await marked.parse(bin.content);
-
-// Extract the specific code block
+// get code block index
 const blockIndex = parseInt(blockId.replace("code-block-", ""));
-const codeBlockRegex = /<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/g;
-const blocks = [...parsed.matchAll(codeBlockRegex)];
+const result = extractCodeBlock(parsed, blockIndex);
 
-if (blockIndex >= blocks.length) {
+if (!result) {
   return new Response(null, { status: 404 });
 }
 
-const codeAttrs = blocks[blockIndex][1];
-const codeContent = blocks[blockIndex][0];
-
-// Extract language from class
-const langMatch = codeAttrs.match(/class="[^"]*language-(\w+)[^"]*"/);
-const language = langMatch ? langMatch[1] : "plaintext";
+const { html: codeContent, language } = result;
 ---
 
 <!doctype html>
@@ -91,10 +72,11 @@ const language = langMatch ? langMatch[1] : "plaintext";
       }
 
       .embed-header .language {
-        text-transform: capitalize;
-        letter-spacing: 0.3px;
-        font-size: 13px;
-        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 11px;
+        opacity: 0.7;
+        font-weight: 600;
       }
 
       .embed-header .actions {
@@ -127,14 +109,27 @@ const language = langMatch ? langMatch[1] : "plaintext";
         min-height: 0;
       }
 
+      .code-container::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      .code-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .code-container::-webkit-scrollbar-thumb {
+        border-radius: 5px;
+      }
+
       pre {
         margin: 0;
         padding: 16px;
         height: 100%;
-        overflow: auto;
+        overflow: visible;
         border-radius: 0;
-        font-size: 13px;
-        line-height: 1.6;
+        font-size: 12px;
+        line-height: 1.5;
         font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
           "Liberation Mono", monospace;
       }
@@ -167,6 +162,14 @@ const language = langMatch ? langMatch[1] : "plaintext";
           background-color: rgba(175, 184, 193, 0.2);
         }
 
+        .code-container::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.2);
+        }
+
+        .code-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 0, 0, 0.3);
+        }
+
         pre {
           background-color: #ffffff;
         }
@@ -197,6 +200,14 @@ const language = langMatch ? langMatch[1] : "plaintext";
           background-color: rgba(110, 118, 129, 0.2);
         }
 
+        .code-container::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        .code-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
         pre {
           background-color: #0d1117;
         }
@@ -212,45 +223,106 @@ const language = langMatch ? langMatch[1] : "plaintext";
     <div class="embed-header">
       <span class="language">{language}</span>
       <div class="actions">
-        <button class="code-btn" id="copy-btn" title="Copy code" aria-label="Copy code">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
+        <button
+          class="code-btn"
+          id="copy-btn"
+          title="Copy code"
+          aria-label="Copy code"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path
+              d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+            ></path><path d="M16 4h2a2 2 0 0 1 2 2v4"></path><path d="M21 14H11"
+            ></path><path d="m15 10-4 4 4 4"></path></svg
+          >
         </button>
-        <button class="code-btn" id="embed-btn" title="Copy embed link" aria-label="Copy embed link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+        <button
+          class="code-btn"
+          id="embed-btn"
+          title="Copy embed link"
+          aria-label="Copy embed link"
+          data-embed-url={`/${customUrl}/embed/${blockId}`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path d="M9 17H7A5 5 0 0 1 7 7h2"></path><path
+              d="M15 7h2a5 5 0 1 1 0 10h-2"></path><line
+              x1="8"
+              x2="16"
+              y1="12"
+              y2="12"></line></svg
+          >
         </button>
       </div>
     </div>
     <div class="code-container">
       <div set:html={codeContent} />
     </div>
-    <script define:vars={{ embedUrl: `/${customUrl}/embed/${blockId}` }}>
-      const ICONS = {
-        copy: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>',
-        link: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>',
-        check: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
-      };
+    <script>
+      import {
+        LUCIDE_ICONS,
+        calculateIframeHeight,
+        generateIframeCode,
+        copyToClipboard,
+      } from "../../../utils/codeblocks";
 
-      const copyBtn = document.getElementById('copy-btn');
-      const embedBtn = document.getElementById('embed-btn');
-      const codeElement = document.querySelector('pre code');
+      // dom check
+      document.addEventListener("DOMContentLoaded", () => {
+        const copyBtn = document.getElementById("copy-btn");
+        const embedBtn = document.getElementById("embed-btn");
+        const codeElement = document.querySelector(".code-container pre code");
 
-      copyBtn?.addEventListener('click', () => {
-        const code = codeElement?.textContent || '';
-        navigator.clipboard.writeText(code);
-        copyBtn.innerHTML = ICONS.check;
-        setTimeout(() => {
-          copyBtn.innerHTML = ICONS.copy;
-        }, 1500);
-      });
+        const embedUrl = embedBtn?.getAttribute("data-embed-url") || "";
 
-      embedBtn?.addEventListener('click', () => {
-        const fullUrl = `${window.location.origin}${embedUrl}`;
-        const iframeCode = `<iframe src="${fullUrl}" width="100%" height="400" frameborder="0" style="border: 1px solid #d0d7de; border-radius: 6px; overflow: hidden;"></iframe>`;
-        navigator.clipboard.writeText(iframeCode);
-        embedBtn.innerHTML = ICONS.check;
-        setTimeout(() => {
-          embedBtn.innerHTML = ICONS.link;
-        }, 1500);
+        if (!codeElement) {
+          console.error("Code element not found");
+          return;
+        }
+
+        copyBtn?.addEventListener("click", async () => {
+          const code = codeElement.textContent || "";
+          const success = await copyToClipboard(code);
+
+          if (success) {
+            copyBtn.innerHTML = LUCIDE_ICONS.check;
+            setTimeout(() => {
+              copyBtn.innerHTML = LUCIDE_ICONS.copy;
+            }, 1500);
+          }
+        });
+
+        embedBtn?.addEventListener("click", async () => {
+          const codeLines = (codeElement.textContent || "").split("\n").length;
+          const calculatedHeight = calculateIframeHeight(codeLines);
+          const fullUrl = `${window.location.origin}${embedUrl}`;
+          const iframeCode = generateIframeCode(fullUrl, calculatedHeight);
+
+          const success = await copyToClipboard(iframeCode);
+
+          if (success) {
+            embedBtn.innerHTML = LUCIDE_ICONS.check;
+            setTimeout(() => {
+              embedBtn.innerHTML = LUCIDE_ICONS.link;
+            }, 1500);
+          }
+        });
       });
     </script>
   </body>
