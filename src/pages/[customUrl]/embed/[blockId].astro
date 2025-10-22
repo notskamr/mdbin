@@ -1,0 +1,257 @@
+---
+import { getBin } from "../../../utils/db";
+import { Marked } from "marked";
+import { markedHighlight } from "marked-highlight";
+import hljs from "highlight.js";
+
+const { customUrl, blockId } = Astro.params;
+
+if (!customUrl || !blockId) {
+  return new Response(null, { status: 404 });
+}
+
+const bin = await getBin(customUrl);
+
+if (!bin) {
+  return new Response(null, { status: 404 });
+}
+
+const marked = new Marked(
+  markedHighlight({
+    emptyLangClass: "hljs",
+    langPrefix: "hljs language-",
+    highlight(code, lang, info) {
+      const language = hljs.getLanguage(lang) ? lang : "plaintext";
+      return hljs.highlight(code, { language }).value;
+    },
+  })
+);
+
+const parsed = await marked.parse(bin.content);
+
+// Extract the specific code block
+const blockIndex = parseInt(blockId.replace("code-block-", ""));
+const codeBlockRegex = /<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/g;
+const blocks = [...parsed.matchAll(codeBlockRegex)];
+
+if (blockIndex >= blocks.length) {
+  return new Response(null, { status: 404 });
+}
+
+const codeAttrs = blocks[blockIndex][1];
+const codeContent = blocks[blockIndex][0];
+
+// Extract language from class
+const langMatch = codeAttrs.match(/class="[^"]*language-(\w+)[^"]*"/);
+const language = langMatch ? langMatch[1] : "plaintext";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Embed - {language}</title>
+    <link
+      rel="stylesheet"
+      href="/resources/highlight-js/github.min.css"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      rel="stylesheet"
+      href="/resources/highlight-js/github-dark.min.css"
+      media="(prefers-color-scheme: dark)"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .embed-header {
+        padding: 10px 14px;
+        border-bottom: 1px solid;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
+
+      .embed-header .language {
+        text-transform: capitalize;
+        letter-spacing: 0.3px;
+        font-size: 13px;
+        opacity: 0.8;
+      }
+
+      .embed-header .actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .code-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        background: transparent;
+      }
+
+      .code-btn svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .code-container {
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px;
+        height: 100%;
+        overflow: auto;
+        border-radius: 0;
+        font-size: 13px;
+        line-height: 1.6;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+
+      pre code.hljs {
+        display: block;
+        padding: 0;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+      }
+
+      @media (prefers-color-scheme: light) {
+        body {
+          background-color: #ffffff;
+          color: #24292f;
+        }
+
+        .embed-header {
+          background-color: #f6f8fa;
+          border-color: #d0d7de;
+          color: #24292f;
+        }
+
+        .code-btn {
+          color: #57606a;
+        }
+
+        .code-btn:hover {
+          background-color: rgba(175, 184, 193, 0.2);
+        }
+
+        pre {
+          background-color: #ffffff;
+        }
+
+        pre code.hljs {
+          color: #24292f;
+          background-color: transparent;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #0d1117;
+          color: #e6edf3;
+        }
+
+        .embed-header {
+          background-color: #161b22;
+          border-color: #30363d;
+          color: #e6edf3;
+        }
+
+        .code-btn {
+          color: #8b949e;
+        }
+
+        .code-btn:hover {
+          background-color: rgba(110, 118, 129, 0.2);
+        }
+
+        pre {
+          background-color: #0d1117;
+        }
+
+        pre code.hljs {
+          color: #e6edf3;
+          background-color: transparent;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="embed-header">
+      <span class="language">{language}</span>
+      <div class="actions">
+        <button class="code-btn" id="copy-btn" title="Copy code" aria-label="Copy code">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>
+        </button>
+        <button class="code-btn" id="embed-btn" title="Copy embed link" aria-label="Copy embed link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="code-container">
+      <div set:html={codeContent} />
+    </div>
+    <script define:vars={{ embedUrl: `/${customUrl}/embed/${blockId}` }}>
+      const ICONS = {
+        copy: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>',
+        link: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>',
+        check: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+      };
+
+      const copyBtn = document.getElementById('copy-btn');
+      const embedBtn = document.getElementById('embed-btn');
+      const codeElement = document.querySelector('pre code');
+
+      copyBtn?.addEventListener('click', () => {
+        const code = codeElement?.textContent || '';
+        navigator.clipboard.writeText(code);
+        copyBtn.innerHTML = ICONS.check;
+        setTimeout(() => {
+          copyBtn.innerHTML = ICONS.copy;
+        }, 1500);
+      });
+
+      embedBtn?.addEventListener('click', () => {
+        const fullUrl = `${window.location.origin}${embedUrl}`;
+        const iframeCode = `<iframe src="${fullUrl}" width="100%" height="400" frameborder="0" style="border: 1px solid #d0d7de; border-radius: 6px; overflow: hidden;"></iframe>`;
+        navigator.clipboard.writeText(iframeCode);
+        embedBtn.innerHTML = ICONS.check;
+        setTimeout(() => {
+          embedBtn.innerHTML = ICONS.link;
+        }, 1500);
+      });
+    </script>
+  </body>
+</html>

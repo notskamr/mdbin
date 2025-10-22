@@ -29,12 +29,13 @@ const marked = new Marked(
 );
 
 const parsed = await marked.parse(bin.content);
-
+console.log(parsed);
 const clean = sanitizeHtml(parsed, {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
   allowedClasses: {
     pre: ["astro-code", "github-dark", "github-light", "hljs"],
-    code: ["astro-code", "github-dark", "github-light", "hljs"],
+    code: [/^(astro-code|github-dark|github-light|hljs|language-.*)$/],
+    span: [/^hljs-.*/],
   },
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
@@ -81,6 +82,7 @@ const title = lines[0].replace(/<[^>]*>/g, "");
       media="(prefers-color-scheme: dark)"
     />
   </Fragment>
+
   <section
     class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-6"
     set:html={clean}
@@ -143,6 +145,64 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     main.prepend(section);
     sessionStorage.removeItem("token");
   }
+
+  // Add copy and embed buttons to code blocks
+  const ICONS = {
+    copy: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy-icon lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>',
+    link: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link2-icon lucide-link-2"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>',
+    check:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>',
+  };
+
+  document.querySelectorAll(".md pre").forEach((pre, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "code-block-wrapper";
+    pre.parentNode?.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "code-toolbar";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "code-btn";
+    copyBtn.innerHTML = ICONS.copy;
+    copyBtn.title = "Copy code";
+    copyBtn.ariaLabel = "Copy code";
+
+    const embedBtn = document.createElement("button");
+    embedBtn.className = "code-btn";
+    embedBtn.innerHTML = ICONS.link;
+    embedBtn.title = "Copy embed link";
+    embedBtn.ariaLabel = "Copy embed link";
+
+    const codeElement = pre.querySelector("code");
+
+    copyBtn.addEventListener("click", () => {
+      const code = codeElement?.textContent || "";
+      navigator.clipboard.writeText(code);
+      copyBtn.innerHTML = ICONS.check;
+      setTimeout(() => {
+        copyBtn.innerHTML = ICONS.copy;
+      }, 1500);
+    });
+
+    embedBtn.addEventListener("click", () => {
+      const blockId = `code-block-${index}`;
+      pre.id = blockId;
+      const embedUrl = `${window.location.origin}${window.location.pathname}/embed/${blockId}`;
+      const iframeCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border: 1px solid #d0d7de; border-radius: 6px; overflow: hidden;"></iframe>`;
+
+      navigator.clipboard.writeText(iframeCode);
+      embedBtn.innerHTML = ICONS.check;
+      setTimeout(() => {
+        embedBtn.innerHTML = ICONS.link;
+      }, 1500);
+    });
+
+    toolbar.appendChild(copyBtn);
+    toolbar.appendChild(embedBtn);
+    wrapper.appendChild(toolbar);
+  });
 </script>
 <style is:inline>
   #token-code {
@@ -159,27 +219,110 @@ const title = lines[0].replace(/<[^>]*>/g, "");
     }
   }
 
-  /* Base code block styling */
-  pre {
-    border-radius: 6px;
+  .code-block-wrapper {
+    position: relative;
     margin: 1em 0;
   }
 
-  pre code.hljs {
-    padding: 1em;
-    border-radius: 4px;
+  .code-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
   }
 
-  /* Ensure proper contrast in light/dark modes */
+  .code-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  @media (prefers-color-scheme: light) {
+    .code-btn {
+      background-color: #ffffff;
+      border-color: #d0d7de;
+      color: #24292f;
+    }
+
+    .code-btn:hover {
+      background-color: #f6f8fa;
+      border-color: #afb8c1;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .code-btn {
+      background-color: #0d1117;
+      border-color: #30363d;
+      color: #e6edf3;
+    }
+
+    .code-btn:hover {
+      background-color: #161b22;
+      border-color: #484f58;
+    }
+  }
+
+  .md pre {
+    border-radius: 6px;
+    margin: 0;
+    padding: 1em;
+    overflow-x: auto;
+  }
+
+  .md pre code.hljs {
+    display: block;
+    padding: 0;
+  }
+
   @media (prefers-color-scheme: light) {
     .md pre {
-      background-color: #f6f8fa;
+      background-color: #ffffff;
+      border: 1px solid #d0d7de;
+    }
+
+    .md pre code.hljs {
+      color: #24292f;
     }
   }
 
   @media (prefers-color-scheme: dark) {
     .md pre {
       background-color: #0d1117;
+      border: 1px solid #30363d;
+    }
+
+    .md pre code.hljs {
+      color: #e6edf3;
+    }
+  }
+
+  .md code:not(pre code) {
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 85%;
+  }
+
+  @media (prefers-color-scheme: light) {
+    .md code:not(pre code) {
+      background-color: rgba(175, 184, 193, 0.2);
+      color: #24292f;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .md code:not(pre code) {
+      background-color: rgba(110, 118, 129, 0.4);
+      color: #e6edf3;
     }
   }
 </style>
