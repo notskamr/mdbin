@@ -7,4 +7,4 @@ You can self-host this service on [Cloudflare Pages](https://pages.cloudflare.co
 A public instance of this service is available at [mdbin.pages.dev](https://mdbin.pages.dev).
 
 ## License
-See the [LICENSE](LICENSE) file for license rights and limitations (MIT).
+See the [LICENSE.md](LICENSE.md) file for license rights and limitations (MIT).
