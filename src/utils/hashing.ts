@@ -1,10 +1,11 @@
 export async function hashString(
     string: string,
-    providedSalt?: Uint8Array
+    providedSalt?: Uint8Array<ArrayBuffer>
 ): Promise<string> {
     const encoder = new TextEncoder();
     // Use provided salt if available, otherwise generate a new one
-    const salt = providedSalt || crypto.getRandomValues(new Uint8Array(16));
+    const salt: Uint8Array<ArrayBuffer> =
+        providedSalt || crypto.getRandomValues(new Uint8Array(16));
     const keyMaterial = await crypto.subtle.importKey(
         "raw",
         encoder.encode(string),

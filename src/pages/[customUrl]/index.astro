@@ -1,7 +1,7 @@
 ---
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getBin } from "../../utils/db";
-import { parseMarkdown } from "../../utils/markdown";
+import { parseMarkdown, extractTitle } from "../../utils/markdown";
 
 const { customUrl } = Astro.params;
 
@@ -15,8 +15,8 @@ if (!bin) {
 }
 
 const clean = await parseMarkdown(bin.content);
-const lines = clean.split("\n");
-const title = lines[0].replace(/<[^>]*>/g, "");
+
+const title = extractTitle(bin.content) ?? customUrl;
 ---
 
 <MainLayout {title} header={false}>

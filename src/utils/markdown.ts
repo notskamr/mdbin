@@ -1,4 +1,4 @@
-import { Marked } from "marked";
+import { Marked, type Tokens } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import sanitizeHtml from "sanitize-html";
@@ -56,6 +56,16 @@ export async function parseMarkdown(content: string) {
     const marked = createMarkedInstance();
     const parsed = await marked.parse(content);
     return sanitizeMarkdown(parsed);
+}
+
+export function extractTitle(content: string) {
+    const marked = createMarkedInstance();
+    const tokens = marked.lexer(content);
+
+    const heading = tokens.find(
+        (token): token is Tokens.Heading => token.type === "heading"
+    );
+    return heading?.text.split("\n")[0].trim() || undefined;
 }
 
 export function extractCodeBlock(html: string, blockIndex: number) {
