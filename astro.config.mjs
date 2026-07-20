@@ -14,6 +14,7 @@ export default defineConfig({
   }),
   vite: {
     define: {
+      "process.env.CONTENT_ENCRYPTION_KEY": JSON.stringify(process.env.CONTENT_ENCRYPTION_KEY),
       "process.env.TURSO_DB_URL": JSON.stringify(process.env.TURSO_DB_URL),
       "process.env.TURSO_AUTH_TOKEN": JSON.stringify(process.env.TURSO_AUTH_TOKEN)
     },
