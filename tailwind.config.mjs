@@ -6,7 +6,16 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: ["-apple-system", "BlinkMacSystemFont", "'Inter'", 'system-ui', 'sans-serif'],
-			}
+			},
+			typography: {
+				DEFAULT: {
+					css: {
+						// prose draws literal backticks around inline code by default
+						'code::before': { content: 'none' },
+						'code::after': { content: 'none' },
+					},
+				},
+			},
 		},
 	},
 	plugins: [
