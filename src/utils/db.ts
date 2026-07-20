@@ -2,6 +2,7 @@ import { turso, type Bin, type BinRes } from "../db";
 import { hashString, verifyString } from "./hashing";
 import { formatToken, generateCustomUrl, generateToken, parseToken } from "./general";
 import { validateCustomUrl, validateToken } from "./validation";
+import { decryptContent, encryptContent } from "./encryption";
 
 export async function newBin(content: string, customUrl?: string, token?: string) {
     // Regex to validate custom URL
@@ -28,7 +29,7 @@ export async function newBin(content: string, customUrl?: string, token?: string
 
     const { rows: [{ id: binId }] } = await turso.execute({
         sql: `INSERT INTO markdown_bins (custom_url, content) VALUES (?, ?) RETURNING id`,
-        args: [customUrl, content],
+        args: [customUrl, await encryptContent(content)],
     });
 
     await turso.execute({
@@ -58,7 +59,7 @@ export async function getBin(customUrl: string) {
         return null;
     }
 
-    return parseBinRes(res.rows[0] as unknown as BinRes);
+    return await parseBinRes(res.rows[0] as unknown as BinRes);
 }
 
 export async function getBinById(binId: number) {
@@ -70,7 +71,7 @@ export async function getBinById(binId: number) {
         return null;
     }
 
-    return parseBinRes(res.rows[0] as unknown as BinRes);
+    return await parseBinRes(res.rows[0] as unknown as BinRes);
 }
 
 export async function editBin(binId: number, content: string, token: string) {
@@ -81,14 +82,14 @@ export async function editBin(binId: number, content: string, token: string) {
 
     const res = await turso.execute({
         sql: `UPDATE markdown_bins SET content = ? WHERE id = ? RETURNING *`,
-        args: [content, binId],
+        args: [await encryptContent(content), binId],
     });
 
     if (res.rows.length === 0) {
         throw new Error("Bin not found. Something went wrong!");
     }
 
-    return parseBinRes(res.rows[0] as unknown as BinRes);
+    return await parseBinRes(res.rows[0] as unknown as BinRes);
 }
 
 export async function deleteBin(binId: number, token: string) {
@@ -133,11 +134,11 @@ export async function checkCustomUrlAvailable(customUrl: string) {
     return rows.length === 0;
 }
 
-export function parseBinRes(res: BinRes) {
+export async function parseBinRes(res: BinRes) {
     return {
         id: res.id,
         customUrl: res.custom_url,
-        content: res.content,
+        content: await decryptContent(res.content),
         createdAt: res.created_at,
         updatedAt: res.updated_at,
     } as Bin;
