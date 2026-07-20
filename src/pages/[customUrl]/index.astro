@@ -1,5 +1,6 @@
 ---
 import MainLayout from "../../layouts/MainLayout.astro";
+import Markdown from "../../components/Markdown.astro";
 import { getBin } from "../../utils/db";
 import { parseMarkdown, extractTitle } from "../../utils/markdown";
 
@@ -35,10 +36,7 @@ const title = extractTitle(bin.content) ?? customUrl;
     />
   </Fragment>
 
-  <section
-    class="md bg-neutral-200 dark:bg-neutral-800 min-h-[60vh] p-6"
-    set:html={clean}
-  />
+  <Markdown html={clean} />
   <section id="buttons" class="flex justify-start mt-4 gap-2">
     <a
       class="px-4 py-2 bg-neutral-200 dark:bg-neutral-800"
@@ -177,113 +175,6 @@ const title = extractTitle(bin.content) ?? customUrl;
   @media (prefers-color-scheme: dark) {
     #token-code {
       background: rgba(0, 0, 0, 0.3);
-    }
-  }
-
-  .code-block-wrapper {
-    position: relative;
-    margin: 1em 0;
-  }
-
-  .code-toolbar {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    gap: 4px;
-    z-index: 10;
-  }
-
-  .code-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: 1px solid;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  @media (prefers-color-scheme: light) {
-    .code-btn {
-      background-color: #ffffff;
-      border-color: #d0d7de;
-      color: #24292f;
-    }
-
-    .code-btn:hover {
-      background-color: #f6f8fa;
-      border-color: #afb8c1;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .code-btn {
-      background-color: #0d1117;
-      border-color: #30363d;
-      color: #e6edf3;
-    }
-
-    .code-btn:hover {
-      background-color: #161b22;
-      border-color: #484f58;
-    }
-  }
-
-  .md pre {
-    border-radius: 6px;
-    margin: 0;
-    padding: 1em;
-    overflow-x: auto;
-  }
-
-  .md pre code.hljs {
-    display: block;
-    padding: 0;
-  }
-
-  @media (prefers-color-scheme: light) {
-    .md pre {
-      background-color: #ffffff;
-      border: 1px solid #d0d7de;
-    }
-
-    .md pre code.hljs {
-      color: #24292f;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .md pre {
-      background-color: #0d1117;
-      border: 1px solid #30363d;
-    }
-
-    .md pre code.hljs {
-      color: #e6edf3;
-    }
-  }
-
-  .md code:not(pre code) {
-    padding: 0.2em 0.4em;
-    border-radius: 3px;
-    font-size: 85%;
-  }
-
-  @media (prefers-color-scheme: light) {
-    .md code:not(pre code) {
-      background-color: rgba(175, 184, 193, 0.2);
-      color: #24292f;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .md code:not(pre code) {
-      background-color: rgba(110, 118, 129, 0.4);
-      color: #e6edf3;
     }
   }
 </style>
