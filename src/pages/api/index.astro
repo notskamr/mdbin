@@ -1,0 +1,28 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+import Markdown from "../../components/Markdown.astro";
+import { parseMarkdown } from "../../utils/markdown";
+import apiDocs from "../../docs/api.md?raw";
+
+const content = apiDocs.replaceAll("{{BASE_URL}}", Astro.url.origin);
+const clean = await parseMarkdown(content);
+---
+
+<MainLayout title="API Documentation" header={false}>
+  <Fragment slot="head-scripts">
+    <link
+      id="hljs-theme-light"
+      rel="stylesheet"
+      href="/resources/highlight-js/github.min.css"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      id="hljs-theme-dark"
+      rel="stylesheet"
+      href="/resources/highlight-js/github-dark.min.css"
+      media="(prefers-color-scheme: dark)"
+    />
+  </Fragment>
+
+  <Markdown html={clean} />
+</MainLayout>
