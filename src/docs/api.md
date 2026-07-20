@@ -70,8 +70,8 @@ curl -X PATCH {{BASE_URL}}/api/bins/42 \
   "id": 42,
   "customUrl": "my-notes",
   "content": "# Updated!",
-  "createdAt": "2026-06-18 12:00:00",
-  "updatedAt": "2026-06-18 12:34:56",
+  "createdAt": "2026-06-18T12:00:00.000Z",
+  "updatedAt": "2026-06-18T12:34:56.000Z",
   "url": "{{BASE_URL}}/my-notes"
 }
 ```

@@ -81,7 +81,7 @@ export async function editBin(binId: number, content: string, token: string) {
     }
 
     const res = await turso.execute({
-        sql: `UPDATE markdown_bins SET content = ? WHERE id = ? RETURNING *`,
+        sql: `UPDATE markdown_bins SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *`,
         args: [await encryptContent(content), binId],
     });
 
@@ -134,12 +134,16 @@ export async function checkCustomUrlAvailable(customUrl: string) {
     return rows.length === 0;
 }
 
+function toIsoUtc(sqliteTimestamp: string) {
+    return new Date(sqliteTimestamp.replace(" ", "T") + "Z").toISOString();
+}
+
 export async function parseBinRes(res: BinRes) {
     return {
         id: res.id,
         customUrl: res.custom_url,
         content: await decryptContent(res.content),
-        createdAt: res.created_at,
-        updatedAt: res.updated_at,
+        createdAt: toIsoUtc(res.created_at),
+        updatedAt: toIsoUtc(res.updated_at),
     } as Bin;
 }
